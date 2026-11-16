@@ -1,20 +1,21 @@
 # linux-net-diag.sh
 
-A zero-dependency Bash diagnostic utility built for rapid **Linux system and home/office network troubleshooting**.
+A zero-dependency Bash diagnostic utility for rapid **Linux system and network triage**.
 
 ## Why I Built This
-When diagnosing remote Linux desktops, servers, or router connectivity issues over SSH or screen-share, running a dozen separate commands wastes valuable time. `linux-net-diag.sh` collects the most critical system and network health signals in under 5 seconds with clear `[OK]`, `[WARN]`, and `[FAIL]` status indicators.
+When diagnosing remote Linux desktops, servers, containers, or router connectivity issues, heavy userland wrappers (`ip`, `ss`, `systemctl`, `journalctl`) are not always installed or consistent across init systems. `linux-net-diag.sh` reads `/proc`, `/sys`, and `/etc` directly and uses external commands only as optional fallbacks.
 
-## What It Checks
-1. **System & Resource Health:** OS release, kernel, uptime, RAM/swap utilization, and disk partition warnings (`>=85%`).
-2. **Interfaces & Routing:** Active IPv4 interfaces (`ip -4 -br addr`) and default gateway detection.
-3. **Connectivity & DNS Triage:** Isolates local router issues (`ping` gateway), upstream ISP/NAT issues (`ping 1.1.1.1`), and DNS failures (`getent hosts`).
-4. **Ports & Firewall:** Lists active listening TCP/UDP sockets (`ss -tuln`) and checks `ufw` status.
-5. **Service & Log Errors:** Flags failed `systemd` units and pulls recent high-priority `journalctl` errors.
+## What It Checks (v2)
+1. **Environment, Terminal & System Snapshot:** Detects interactive TTY vs. redirected output (disabling ANSI colors automatically when piped/saved), terminal emulator and multiplexer context (`TERM`, `COLORTERM`, `TERM_PROGRAM`, `TMUX`, `STY`, parent process), hostname, OS release, kernel, uptime, load average, and memory/swap from `/proc/meminfo`.
+2. **Network Interfaces & Routing:** Lists interfaces, operational states, and RX/TX byte counters from `/sys/class/net/*`, and resolves the default IPv4 gateway from `/proc/net/route`.
+3. **Connectivity & DNS:** Runs gateway and WAN (`1.1.1.1`) reachability checks when `ping` is present, and reads configured nameservers from `/etc/resolv.conf`.
+4. **Listening TCP Ports:** Parses `/proc/net/tcp` (state `0A`) to list active listening sockets without `ss` or `netstat`.
+5. **Init System & Log Fallbacks:** Inspects `/proc/1/comm` (`systemd`, `openrc-init`, `runit`, or custom init) and falls back across `journalctl`, `/var/log/syslog`, `/var/log/messages`, and `/dev/kmsg`.
 
 ## Usage
 ```bash
-git clone [https://github.com/YOUR_USERNAME/linux-net-diag.git](https://github.com/YOUR_USERNAME/linux-net-diag.git)
+git clone git@github.com:starsky78777/linux-net-diag.git
 cd linux-net-diag
 chmod +x linux-net-diag.sh
 ./linux-net-diag.sh
+./linux-net-diag.sh > diag-report.txt
